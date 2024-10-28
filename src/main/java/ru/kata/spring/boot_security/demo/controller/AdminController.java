@@ -11,7 +11,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import ru.kata.spring.boot_security.demo.entity.Role;
 import ru.kata.spring.boot_security.demo.entity.User;
 import ru.kata.spring.boot_security.demo.repository.RoleRepository;
-import ru.kata.spring.boot_security.demo.service.RegistrationService;
+import ru.kata.spring.boot_security.demo.service.RegistrationServiceImpl;
+import ru.kata.spring.boot_security.demo.service.RoleServiceImpl;
 import ru.kata.spring.boot_security.demo.service.UserDetailsServiceImpl;
 import ru.kata.spring.boot_security.demo.util.UserValidator;
 import javax.validation.Valid;
@@ -26,17 +27,19 @@ public class AdminController {
     private final PasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository;
     private final UserValidator userValidator;
-    private final RegistrationService registrationService;
+    private final RegistrationServiceImpl registrationServiceImpl;
+    private final RoleServiceImpl roleServiceImpl;
 
     @Autowired
     public AdminController(UserDetailsServiceImpl userDetailsServiceImpl, PasswordEncoder passwordEncoder,
                            RoleRepository roleRepository, UserValidator userValidator,
-                           RegistrationService registrationService) {
+                           RegistrationServiceImpl registrationServiceImpl, RoleServiceImpl roleServiceImpl) {
         this.userDetailsServiceImpl = userDetailsServiceImpl;
         this.passwordEncoder = passwordEncoder;
         this.roleRepository = roleRepository;
         this.userValidator = userValidator;
-        this.registrationService = registrationService;
+        this.registrationServiceImpl = registrationServiceImpl;
+        this.roleServiceImpl = roleServiceImpl;
     }
 
     @GetMapping()
@@ -49,13 +52,15 @@ public class AdminController {
     @GetMapping("/edit")
     public String editPage(@RequestParam("id") Long id, Model model) {
         model.addAttribute("user", userDetailsServiceImpl.findUserById(id));
-        List<Role> roles = roleRepository.findAll();
+        List<Role> roles = roleServiceImpl.findAllRoles();
         model.addAttribute("roles", roles);
         return "/admin/edit";
     }
 
     @GetMapping("/add")
-    public String showAddUserPage(@ModelAttribute("user") User user) {
+    public String showAddUserPage(@ModelAttribute("user") User user, Model model) {
+        List<Role> roles = roleServiceImpl.findAllRoles();
+        model.addAttribute("roles", roles);
         return "admin/add";
     }
 
@@ -67,7 +72,7 @@ public class AdminController {
         if (bindingResult.hasErrors()) {
             return "admin/add";
         }
-        registrationService.register(user);
+        registrationServiceImpl.register(user);
         return "redirect:/admin";
     }
 
@@ -79,7 +84,9 @@ public class AdminController {
         User existingUser = userDetailsServiceImpl.findUserById(user.getId());
         existingUser.setUsername(user.getUsername());
         existingUser.setYearOfBirth(user.getYearOfBirth());
-        existingUser.setPassword(passwordEncoder.encode(user.getPassword()));
+        if (!user.getPassword().equals(existingUser.getPassword())) {
+            existingUser.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
         Set<Role> roles = new HashSet<>();
 
         for (Role role : user.getRoles()) {

@@ -2,25 +2,32 @@ package ru.kata.spring.boot_security.demo.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import ru.kata.spring.boot_security.demo.entity.Role;
 import ru.kata.spring.boot_security.demo.entity.User;
-import ru.kata.spring.boot_security.demo.service.RegistrationService;
+import ru.kata.spring.boot_security.demo.service.RegistrationServiceImpl;
+import ru.kata.spring.boot_security.demo.service.RoleService;
+import ru.kata.spring.boot_security.demo.service.RoleServiceImpl;
 import ru.kata.spring.boot_security.demo.util.UserValidator;
 
 import javax.validation.Valid;
+import java.util.List;
 
 @Controller
 public class AuthController {
     private final UserValidator userValidator;
-    private final RegistrationService registrationService;
+    private final RegistrationServiceImpl registrationServiceImpl;
+    private final RoleServiceImpl roleServiceImpl;
 
     @Autowired
-    public AuthController(UserValidator userValidator, RegistrationService registrationService) {
+    public AuthController(UserValidator userValidator, RegistrationServiceImpl registrationServiceImpl, RoleServiceImpl roleServiceImpl) {
         this.userValidator = userValidator;
-        this.registrationService = registrationService;
+        this.registrationServiceImpl = registrationServiceImpl;
+        this.roleServiceImpl = roleServiceImpl;
     }
 
     @GetMapping("/login")
@@ -29,7 +36,9 @@ public class AuthController {
     }
 
     @GetMapping("/registration")
-    public String registerPage(@ModelAttribute("user") User user) {
+    public String registerPage(@ModelAttribute("user") User user, Model model) {
+        List<Role> roles = roleServiceImpl.findAllRoles();
+        model.addAttribute("roles", roles);
         return "/registration";
     }
 
@@ -42,7 +51,7 @@ public class AuthController {
             return "/registration";
         }
 
-        registrationService.register(user);
+        registrationServiceImpl.register(user);
 
         return "redirect:/login";
     }
